@@ -1,0 +1,84 @@
+name: bench-on-comment
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  bench:
+    if: >
+      github.event.issue.pull_request == null &&
+      github.event.comment.user.login == 'sena-m09' &&
+      startsWith(github.event.comment.body, '/bench')
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      issues: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: React 👀 to the trigger comment
+        run: |
+          gh api -X POST \
+            "/repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -f content='eyes'
+
+      - name: Parse N from comment body
+        id: parse
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          N=$(printf '%s' "$COMMENT_BODY" | grep -oE 'n=[0-9]+' | head -1 | cut -d= -f2)
+          echo "n=${N:-5}" >> "$GITHUB_OUTPUT"
+          echo "requested N=${N:-5}"
+
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Announce start
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body \
+            "▶️ ベンチ開始 (N=${{ steps.parse.outputs.n }} × 4 workflow = $(( ${{ steps.parse.outputs.n }} * 4 )) run)。run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Run benchmark
+        run: pnpm bench -- --n ${{ steps.parse.outputs.n }} --branch ${{ github.ref_name }}
+
+      - name: Analyze
+        run: pnpm analyze results.csv REPORT.md
+
+      - name: Post report as comment
+        run: |
+          {
+            echo "✅ ベンチ完了 (N=${{ steps.parse.outputs.n }})"
+            echo ""
+            cat REPORT.md
+            echo ""
+            echo "---"
+            echo "run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > final-comment.md
+          gh issue comment ${{ github.event.issue.number }} --body-file final-comment.md
+
+      - name: Upload raw CSV as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ github.run_id }}
+          path: results.csv
+
+      - name: React ✅ on success / ❌ on failure
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then EMOJI="+1"; else EMOJI="-1"; fi
+          gh api -X POST \
+            "/repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -f content="$EMOJI"

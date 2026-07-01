@@ -16,6 +16,8 @@
   - `matrix.yml`: 1 job 定義 × `strategy.matrix` で 4 job (それぞれ別 runner)
   - `multi-job.yml`: 独立 4 job (それぞれ別 runner)
   - 4 本は **依存セットアップまで完全一致**、違いは並列化のやり方だけ
+  - `bench-on-comment.yml`: issue に `sena-m09` が `/bench` (または `/bench n=10`) と
+    コメントしたら、上記 4 workflow を N 回ずつ回して結果を同じ issue にコメントバック
 - `scripts/benchmark.ts`: gh CLI で 4 種を交互に N 回ずつ起動して `results.csv` に追記
 - `scripts/analyze.ts`: `results.csv` を集計して `REPORT.md` を書き出す
 
@@ -58,6 +60,26 @@ pnpm bench -- --n 20 --branch main
 
 matrix / multi-job は 4 個ずつ runner を消費するので、フリー枠でやるなら N を
 少なめ (10 程度) から始めることを推奨。
+
+### issue コメントから起動
+
+任意の issue に `sena-m09` アカウントで以下のコメントを書くとベンチが走り、
+完了後に結果テーブルを同じ issue にコメントバックする。
+
+```
+/bench
+/bench n=10
+```
+
+- 起動時: 👀 リアクション + 「開始しました」コメント (run URL 付き)
+- 完了時: 👍 (or 👎) リアクション + `REPORT.md` の内容をコメント + `results.csv` を
+  artifact として保存
+- filter は `github.event.comment.user.login == 'sena-m09'` で固定。他ユーザーが
+  `/bench` と書いても走らない。fork PR 経由の乱用対策として
+  `github.event.issue.pull_request == null` (issue のみ、PR は無視) も併用。
+- 追加 secret は不要。`GITHUB_TOKEN` は `workflow_dispatch` を発火できる例外仕様
+  ([docs](https://docs.github.com/en/actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow))
+  なので、`permissions: actions: write, issues: write` だけで足りる。
 
 `results.csv` は append モードなので、途中で止まっても次回は
 そこから続行できる (重複を避けたければ手動で間引く)。
