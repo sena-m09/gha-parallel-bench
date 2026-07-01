@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+.tsbuildinfo
+*.log
+results.csv
+REPORT.md
+.DS_Store

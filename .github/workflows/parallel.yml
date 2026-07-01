@@ -1,0 +1,33 @@
+name: bench-parallel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: lint+typecheck+test+build (parallel)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - parallel:
+          - name: Lint
+            run: pnpm lint
+
+          - name: Typecheck
+            run: pnpm typecheck
+
+          - name: Test
+            run: pnpm test
+
+          - name: Build
+            run: pnpm build
