@@ -4,13 +4,22 @@ on:
   issue_comment:
     types: [created]
 
+# 同一 issue で連打された /bench を直列化し、暴走時のコスト爆発を防ぐ。
+concurrency:
+  group: bench-on-comment-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 jobs:
   bench:
     if: >
+      github.repository_owner == 'sena-m09' &&
       github.event.issue.pull_request == null &&
       github.event.comment.user.login == 'sena-m09' &&
       startsWith(github.event.comment.body, '/bench')
     runs-on: ubuntu-latest
+    # 万一 comment.user.login のガードを突破された場合の課金ストッパー。
+    # required reviewers を設定した GitHub Environment 側で追加の人手承認を挟むことを想定。
+    environment: bench
     timeout-minutes: 350
     permissions:
       issues: write
@@ -31,8 +40,15 @@ jobs:
           COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           N=$(printf '%s' "$COMMENT_BODY" | grep -oE 'n=[0-9]+' | head -1 | cut -d= -f2)
-          echo "n=${N:-5}" >> "$GITHUB_OUTPUT"
-          echo "requested N=${N:-5}"
+          N=${N:-5}
+          # 1 回のトリガーで走らせられる上限。dispatch は N × 4 workflow なので N=50 で 200 run。
+          MAX_N=50
+          if [ "$N" -gt "$MAX_N" ]; then
+            echo "requested N=$N exceeds MAX_N=$MAX_N, clamping"
+            N=$MAX_N
+          fi
+          echo "n=$N" >> "$GITHUB_OUTPUT"
+          echo "requested N=$N"
 
       - uses: actions/checkout@v7
 
