@@ -40,12 +40,12 @@ function parseCsv(text: string): Row[] {
     const cells = splitCsv(line);
     if (cells.length < 6) continue;
     rows.push({
-      timestamp: cells[0]!,
+      timestamp: cells[0],
       workflow: cells[1] as WorkflowLabel,
-      runId: cells[2]!,
+      runId: cells[2],
       wallClockSec: Number(cells[3]),
       billableMin: Number(cells[4]),
-      jobs: JSON.parse(cells[5]!) as JobTiming[],
+      jobs: JSON.parse(cells[5]) as JobTiming[],
     });
   }
   return rows;
@@ -56,7 +56,7 @@ function splitCsv(line: string): string[] {
   let cur = "";
   let inQ = false;
   for (let i = 0; i < line.length; i++) {
-    const c = line[i]!;
+    const c = line[i];
     if (inQ) {
       if (c === '"' && line[i + 1] === '"') {
         cur += '"';
@@ -98,8 +98,8 @@ function stats(xs: number[]): Stats {
   const variance = sorted.reduce((acc, v) => acc + (v - mean) ** 2, 0) / n;
   return {
     n,
-    min: sorted[0]!,
-    max: sorted[n - 1]!,
+    min: sorted[0],
+    max: sorted[n - 1],
     mean,
     median: percentile(sorted, 0.5),
     p95: percentile(sorted, 0.95),
@@ -112,8 +112,8 @@ function percentile(sorted: number[], p: number): number {
   const idx = (sorted.length - 1) * p;
   const lo = Math.floor(idx);
   const hi = Math.ceil(idx);
-  if (lo === hi) return sorted[lo]!;
-  return sorted[lo]! + (sorted[hi]! - sorted[lo]!) * (idx - lo);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
 }
 
 function fmt(n: number): string {

@@ -50,8 +50,8 @@ function run(cmd: string, args: string[]): Promise<{ code: number; stdout: strin
     const p = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
-    p.stdout.on("data", (d) => (stdout += d.toString()));
-    p.stderr.on("data", (d) => (stderr += d.toString()));
+    p.stdout.on("data", (d: Buffer) => (stdout += d.toString()));
+    p.stderr.on("data", (d: Buffer) => (stderr += d.toString()));
     p.on("error", reject);
     p.on("close", (code) => resolve({ code: code ?? -1, stdout, stderr }));
   });
@@ -193,7 +193,7 @@ async function main() {
 
   console.log(`running ${plan.length} runs (${n} of each × ${WORKFLOWS.length}), branch=${branch}`);
   for (let i = 0; i < plan.length; i++) {
-    const { label, file } = plan[i]!;
+    const { label, file } = plan[i];
     const stamp = new Date().toISOString();
     console.log(`[${i + 1}/${plan.length}] ${label} dispatch ...`);
     try {

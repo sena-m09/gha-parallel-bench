@@ -7,9 +7,9 @@ import globals from "globals";
 export default tseslint.config(
   { ignores: ["dist/**", "coverage/**", "node_modules/**", "results.csv", "REPORT.md"] },
   js.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
   {
     files: ["**/*.{ts,tsx}"],
+    extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
@@ -31,5 +31,9 @@ export default tseslint.config(
       "react/prop-types": "off",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
+  },
+  {
+    files: ["**/*.{js,mjs,cjs}"],
+    extends: [tseslint.configs.disableTypeChecked],
   },
 );
